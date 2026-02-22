@@ -11,10 +11,13 @@
  *   aiEngine.callAI('alter-gemini-pro', params, onSuccess, onError);
  *
  * Available shorthands (see aiEngine.models for the full list):
- *   alter-gemini-pro   alter-gemini-fast
- *   anthropic-opus     anthropic-sonnet   anthropic-haiku
- *   openai-5-mini      openai-5-nano
- *   ollama-llama3      ollama-mistral
+ *   alter-openai-4o      alter-openai-4o-mini  alter-openai-o1    alter-openai-o3   alter-openai-o3-mini
+ *   alter-claude-opus    alter-claude-sonnet   alter-claude-37-sonnet              alter-claude-haiku
+ *   alter-gemini-pro     alter-gemini-15-flash alter-gemini-fast  alter-gemini-25-pro
+ *   alter-mistral-large  alter-mistral-small   alter-codestral    alter-pixtral
+ *   anthropic-opus       anthropic-sonnet      anthropic-haiku
+ *   openai-5-mini        openai-5-nano
+ *   ollama-llama3        ollama-mistral
  *
  * You can also pass a custom config object if you need a model not in the list:
  *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
@@ -29,8 +32,27 @@ const aiEngine = {};
 
 const MODELS = {
     // Alter — routing proxy (model field: "Provider#model-id")
-    'alter-gemini-pro':   { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'   },
-    'alter-gemini-fast':  { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'  },
+    // OpenAI models via Alter
+    'alter-openai-4o':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
+    'alter-openai-4o-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
+    'alter-openai-o1':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
+    'alter-openai-o3':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
+    'alter-openai-o3-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
+    // Claude models via Alter
+    'alter-claude-opus':      { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
+    'alter-claude-sonnet':    { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
+    'alter-claude-37-sonnet': { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
+    'alter-claude-haiku':     { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
+    // Gemini models via Alter
+    'alter-gemini-pro':       { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
+    'alter-gemini-15-flash':  { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
+    'alter-gemini-fast':      { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
+    'alter-gemini-25-pro':    { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
+    // Mistral models via Alter
+    'alter-mistral-large':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
+    'alter-mistral-small':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
+    'alter-codestral':        { endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
+    'alter-pixtral':          { endpoint: 'https://alterhq.com/api', model: 'Mistral#pixtral-large-latest'        },
 
     // Anthropic — direct API
     'anthropic-opus':     { endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },

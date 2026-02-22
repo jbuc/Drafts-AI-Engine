@@ -10,8 +10,23 @@ Copy paste the following code into a scripts action in in drafts. The first time
 
 | Shorthand | Provider | Model |
 |---|---|---|
+| `alter-openai-4o` | Alter | GPT-4o |
+| `alter-openai-4o-mini` | Alter | GPT-4o Mini |
+| `alter-openai-o1` | Alter | o1 |
+| `alter-openai-o3` | Alter | o3 |
+| `alter-openai-o3-mini` | Alter | o3 Mini |
+| `alter-claude-opus` | Alter | Claude 3 Opus |
+| `alter-claude-sonnet` | Alter | Claude 3.5 Sonnet |
+| `alter-claude-37-sonnet` | Alter | Claude 3.7 Sonnet |
+| `alter-claude-haiku` | Alter | Claude 3.5 Haiku |
 | `alter-gemini-pro` | Alter | Gemini 1.5 Pro |
+| `alter-gemini-15-flash` | Alter | Gemini 1.5 Flash |
 | `alter-gemini-fast` | Alter | Gemini 2.0 Flash |
+| `alter-gemini-25-pro` | Alter | Gemini 2.5 Pro |
+| `alter-mistral-large` | Alter | Mistral Large |
+| `alter-mistral-small` | Alter | Mistral Small |
+| `alter-codestral` | Alter | Codestral |
+| `alter-pixtral` | Alter | Pixtral Large |
 | `anthropic-opus` | Anthropic | Claude Opus 4.6 |
 | `anthropic-sonnet` | Anthropic | Claude Sonnet 4.6 |
 | `anthropic-haiku` | Anthropic | Claude Haiku 4.5 |
