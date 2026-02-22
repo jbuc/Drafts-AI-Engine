@@ -47,7 +47,7 @@ const actionOutput = `
 
 `;
 
-const alter-gemini-pro = {
+const alterGeminiPro = {
     endpoint: “https://alterhq.com/api”,
     model: “Gemini#gemini-1.5-pro”
 };
@@ -64,7 +64,7 @@ const onError = function(err) {
 };
 
 
-promptEngine.callAI(alter-gemini-pro,{
+aiEngine.callAI(alterGeminiPro,{
     role: actionRole,
     goal: actionGoal,
     steps: actionInstructions,
