@@ -4,29 +4,29 @@ This is a repository of scripts and other files to use in script actions in agil
 ## Example Basic Script Caller
 NOTE: add files to Drafts/Library/Scripts in iCloud. 
 
-Copy paste the following code into a scripts action in in drafts. The first time makes a call to a new provider (current support for alter, OpenAI, Anthropic, and Ollama) you will be prompted to enter your API key to be added to your credentials for that provider.
+Copy paste the following code into a scripts action in in drafts. The first time makes a call to a new provider (current support for AlterHQ, OpenAI, Anthropic, and Ollama) you will be prompted to enter your API key to be added to your credentials for that provider.
 
 ### Available model shorthands
 
 | Shorthand | Provider | Model |
 |---|---|---|
-| `alter-openai-4o` | Alter | GPT-4o |
-| `alter-openai-4o-mini` | Alter | GPT-4o Mini |
-| `alter-openai-o1` | Alter | o1 |
-| `alter-openai-o3` | Alter | o3 |
-| `alter-openai-o3-mini` | Alter | o3 Mini |
-| `alter-claude-opus` | Alter | Claude 3 Opus |
-| `alter-claude-sonnet` | Alter | Claude 3.5 Sonnet |
-| `alter-claude-37-sonnet` | Alter | Claude 3.7 Sonnet |
-| `alter-claude-haiku` | Alter | Claude 3.5 Haiku |
-| `alter-gemini-pro` | Alter | Gemini 1.5 Pro |
-| `alter-gemini-15-flash` | Alter | Gemini 1.5 Flash |
-| `alter-gemini-fast` | Alter | Gemini 2.0 Flash |
-| `alter-gemini-25-pro` | Alter | Gemini 2.5 Pro |
-| `alter-mistral-large` | Alter | Mistral Large |
-| `alter-mistral-small` | Alter | Mistral Small |
-| `alter-codestral` | Alter | Codestral |
-| `alter-pixtral` | Alter | Pixtral Large |
+| `alter-openai-4o` | AlterHQ | GPT-4o |
+| `alter-openai-4o-mini` | AlterHQ | GPT-4o Mini |
+| `alter-openai-o1` | AlterHQ | o1 |
+| `alter-openai-o3` | AlterHQ | o3 |
+| `alter-openai-o3-mini` | AlterHQ | o3 Mini |
+| `alter-claude-opus` | AlterHQ | Claude 3 Opus |
+| `alter-claude-sonnet` | AlterHQ | Claude 3.5 Sonnet |
+| `alter-claude-37-sonnet` | AlterHQ | Claude 3.7 Sonnet |
+| `alter-claude-haiku` | AlterHQ | Claude 3.5 Haiku |
+| `alter-gemini-pro` | AlterHQ | Gemini 1.5 Pro |
+| `alter-gemini-15-flash` | AlterHQ | Gemini 1.5 Flash |
+| `alter-gemini-fast` | AlterHQ | Gemini 2.0 Flash |
+| `alter-gemini-25-pro` | AlterHQ | Gemini 2.5 Pro |
+| `alter-mistral-large` | AlterHQ | Mistral Large |
+| `alter-mistral-small` | AlterHQ | Mistral Small |
+| `alter-codestral` | AlterHQ | Codestral |
+| `alter-pixtral` | AlterHQ | Pixtral Large |
 | `anthropic-opus` | Anthropic | Claude Opus 4.6 |
 | `anthropic-sonnet` | Anthropic | Claude Sonnet 4.6 |
 | `anthropic-haiku` | Anthropic | Claude Haiku 4.5 |

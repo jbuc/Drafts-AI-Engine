@@ -31,24 +31,24 @@ const aiEngine = {};
 // ---------------------------------------------------------------------------
 
 const MODELS = {
-    // Alter — routing proxy (model field: "Provider#model-id")
-    // OpenAI models via Alter
+    // AlterHQ — routing proxy (model field: "Provider#model-id")
+    // OpenAI models via AlterHQ
     'alter-openai-4o':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
     'alter-openai-4o-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
     'alter-openai-o1':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
     'alter-openai-o3':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
     'alter-openai-o3-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
-    // Claude models via Alter
+    // Claude models via AlterHQ
     'alter-claude-opus':      { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
     'alter-claude-sonnet':    { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
     'alter-claude-37-sonnet': { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
     'alter-claude-haiku':     { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
-    // Gemini models via Alter
+    // Gemini models via AlterHQ
     'alter-gemini-pro':       { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
     'alter-gemini-15-flash':  { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
     'alter-gemini-fast':      { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
     'alter-gemini-25-pro':    { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
-    // Mistral models via Alter
+    // Mistral models via AlterHQ
     'alter-mistral-large':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
     'alter-mistral-small':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
     'alter-codestral':        { endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
@@ -135,15 +135,15 @@ function httpPost(url, headers, body) {
 }
 
 // ---------------------------------------------------------------------------
-// Alter
-// Alter is a routing proxy; the model field encodes provider and model,
+// AlterHQ
+// AlterHQ is a routing proxy; the model field encodes provider and model,
 // e.g. "Gemini#gemini-1.5-pro" or "OpenAI#gpt-4o".
 // The API surface is OpenAI-compatible.
 // ---------------------------------------------------------------------------
 
 function callAlter(providerConfig, params, onSuccess, onError) {
-    const apiKey = getApiKey('alter', 'Alter');
-    if (!apiKey) { onError('Alter: failed to retrieve API key.'); return; }
+    const apiKey = getApiKey('AlterHQ API', 'AlterHQ');
+    if (!apiKey) { onError('AlterHQ: failed to retrieve API key.'); return; }
 
     const baseUrl  = (providerConfig.endpoint || 'https://alterhq.com/api').replace(/\/$/, '');
     const model    = providerConfig.model || 'OpenAI#gpt-4o';
@@ -171,10 +171,10 @@ function callAlter(providerConfig, params, onSuccess, onError) {
             const result = JSON.parse(response.responseText);
             onSuccess(result.choices[0].message.content, result);
         } catch (e) {
-            onError(`Alter: failed to parse response — ${e}`);
+            onError(`AlterHQ: failed to parse response — ${e}`);
         }
     } else {
-        onError(`Alter API error ${response.statusCode}: ${response.responseText}`);
+        onError(`AlterHQ API error ${response.statusCode}: ${response.responseText}`);
     }
 }
 
