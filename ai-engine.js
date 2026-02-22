@@ -6,16 +6,48 @@
  *
  * Usage: aiEngine = require('ai-engine.js');
  *
- * Supported providers: Alter, OpenAI, Anthropic, Ollama
+ * Pass a pre-defined model shorthand string to callAI:
  *
- * Provider configs:
- *   Alter:     { endpoint: "https://alterhq.com/api",        model: "Gemini#gemini-1.5-pro" }
- *   OpenAI:    { endpoint: "https://api.openai.com/v1",      model: "gpt-4o" }
- *   Anthropic: { endpoint: "https://api.anthropic.com",      model: "claude-opus-4-6" }
- *   Ollama:    { endpoint: "http://localhost:11434",          model: "llama3" }
+ *   aiEngine.callAI('alter-gemini-pro', params, onSuccess, onError);
+ *
+ * Available shorthands (see aiEngine.models for the full list):
+ *   alter-gemini-pro   alter-gemini-fast
+ *   anthropic-opus     anthropic-sonnet   anthropic-haiku
+ *   openai-5-mini      openai-5-nano
+ *   ollama-llama3      ollama-mistral
+ *
+ * You can also pass a custom config object if you need a model not in the list:
+ *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
  */
 
 const aiEngine = {};
+
+// ---------------------------------------------------------------------------
+// Pre-defined model registry
+// Keys are the shorthand strings accepted by callAI.
+// ---------------------------------------------------------------------------
+
+const MODELS = {
+    // Alter — routing proxy (model field: "Provider#model-id")
+    'alter-gemini-pro':   { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'   },
+    'alter-gemini-fast':  { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'  },
+
+    // Anthropic — direct API
+    'anthropic-opus':     { endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
+    'anthropic-sonnet':   { endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
+    'anthropic-haiku':    { endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
+
+    // OpenAI — direct API
+    'openai-5-mini':      { endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'                 },
+    'openai-5-nano':      { endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini'            },
+
+    // Ollama — local inference, no API key needed
+    'ollama-llama3':      { endpoint: 'http://localhost:11434', model: 'llama3'   },
+    'ollama-mistral':     { endpoint: 'http://localhost:11434', model: 'mistral'  },
+};
+
+// Expose the registry so scripts can inspect available shorthands.
+aiEngine.models = MODELS;
 
 // ---------------------------------------------------------------------------
 // Provider detection
@@ -252,22 +284,34 @@ function callOllama(providerConfig, params, onSuccess, onError) {
 /**
  * callAI — dispatch a prompt to the specified AI provider.
  *
- * @param {Object}   providerConfig          Provider settings.
- * @param {string}   providerConfig.endpoint Base URL for the provider API.
- * @param {string}   providerConfig.model    Model identifier.
- * @param {Object}   params                  Prompt parameters.
- * @param {string}   [params.role]           System role description.
- * @param {string}   [params.goal]           High-level goal for the AI.
- * @param {string}   [params.steps]          Step-by-step instructions.
- * @param {string}   [params.output]         Output format requirements.
- * @param {string}   [params.example]        An example of desired output.
- * @param {string}   [params.input]          The user's input text.
- * @param {Function} onSuccess               Called with (responseText, rawPayload).
- * @param {Function} onError                 Called with (errorMessage).
+ * @param {string|Object} model             Pre-defined shorthand (e.g. 'alter-gemini-pro') OR
+ *                                          a custom config { endpoint, model }.
+ * @param {Object}        params            Prompt parameters.
+ * @param {string}        [params.role]     System role description.
+ * @param {string}        [params.goal]     High-level goal for the AI.
+ * @param {string}        [params.steps]    Step-by-step instructions.
+ * @param {string}        [params.output]   Output format requirements.
+ * @param {string}        [params.example]  An example of desired output.
+ * @param {string}        [params.input]    The user's input text.
+ * @param {Function}      onSuccess         Called with (responseText, rawPayload).
+ * @param {Function}      onError           Called with (errorMessage).
  */
-aiEngine.callAI = function(providerConfig, params, onSuccess, onError) {
+aiEngine.callAI = function(model, params, onSuccess, onError) {
+    let providerConfig;
+
+    if (typeof model === 'string') {
+        providerConfig = MODELS[model];
+        if (!providerConfig) {
+            const available = Object.keys(MODELS).join(', ');
+            onError(`ai-engine: unknown model "${model}". Available: ${available}`);
+            return;
+        }
+    } else {
+        providerConfig = model;
+    }
+
     if (!providerConfig || !providerConfig.endpoint) {
-        onError('ai-engine: providerConfig.endpoint is required.');
+        onError('ai-engine: a valid model shorthand or config object with an endpoint is required.');
         return;
     }
 
