@@ -357,4 +357,4 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
     }
 };
 
-module.exports = aiEngine;
+aiEngine;
