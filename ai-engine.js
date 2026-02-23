@@ -240,18 +240,44 @@ var aiEngine = (function () {
     /**
      * callAI — dispatch a prompt to the specified AI provider.
      *
-     * @param {string|Object} model         Pre-defined shorthand OR custom config { provider, endpoint, model }.
-     * @param {Object}        params        Prompt parameters.
-     * @param {string}        [params.role]     System role description.
-     * @param {string}        [params.goal]     High-level goal for the AI.
-     * @param {string}        [params.steps]    Step-by-step instructions.
-     * @param {string}        [params.output]   Output format requirements.
-     * @param {string}        [params.example]  An example of desired output.
-     * @param {string}        [params.input]    The user's input text.
-     * @param {Function}      onSuccess     Called with (responseText, rawPayload).
-     * @param {Function}      onError       Called with (errorMessage).
+     * @param {string|Object} model         Pre-defined shorthand (e.g. 'alter-gemini-pro') OR
+     *                                      a custom config { provider, endpoint, model }.
+     * @param {string|Object} [params]      Either a plain string (used as the full input prompt),
+     *                                      or a params object with any of:
+     *                                        params.input    — the user's prompt text
+     *                                        params.role     — system role description
+     *                                        params.goal     — high-level goal
+     *                                        params.steps    — step-by-step instructions
+     *                                        params.output   — output format requirements
+     *                                        params.example  — example of desired output
+     *                                      Omit entirely to send an empty prompt.
+     * @param {Function}      [onSuccess]   Called with (responseText, rawPayload).
+     *                                      Default: creates a new Drafts draft with the response.
+     * @param {Function}      [onError]     Called with (errorMessage).
+     *                                      Default: calls context.fail with the error.
      */
     engine.callAI = function (model, params, onSuccess, onError) {
+        // Normalise params: plain string → { input: string }
+        if (typeof params === 'string') {
+            params = { input: params };
+        } else if (!params || typeof params !== 'object') {
+            params = {};
+        }
+
+        // Default callbacks
+        if (typeof onSuccess !== 'function') {
+            onSuccess = function (responseText) {
+                var d = Draft.create();
+                d.content = responseText;
+                d.update();
+            };
+        }
+        if (typeof onError !== 'function') {
+            onError = function (err) {
+                context.fail('AI Engine Error: ' + err);
+            };
+        }
+
         var providerConfig;
 
         if (typeof model === 'string') {
