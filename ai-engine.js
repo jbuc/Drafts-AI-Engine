@@ -33,39 +33,39 @@ var aiEngine = {};
 const MODELS = {
     // AlterHQ — routing proxy (model field: "Provider#model-id")
     // OpenAI models via AlterHQ
-    'alter-openai-4o':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
-    'alter-openai-4o-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
-    'alter-openai-o1':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
-    'alter-openai-o3':        { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
-    'alter-openai-o3-mini':   { endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
+    'alter-openai-4o':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
+    'alter-openai-4o-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
+    'alter-openai-o1':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
+    'alter-openai-o3':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
+    'alter-openai-o3-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
     // Claude models via AlterHQ
-    'alter-claude-opus':      { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
-    'alter-claude-sonnet':    { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
-    'alter-claude-37-sonnet': { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
-    'alter-claude-haiku':     { endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
+    'alter-claude-opus':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
+    'alter-claude-sonnet':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
+    'alter-claude-37-sonnet': { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
+    'alter-claude-haiku':     { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
     // Gemini models via AlterHQ
-    'alter-gemini-pro':       { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
-    'alter-gemini-15-flash':  { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
-    'alter-gemini-fast':      { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
-    'alter-gemini-25-pro':    { endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
+    'alter-gemini-pro':       { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
+    'alter-gemini-15-flash':  { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
+    'alter-gemini-fast':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
+    'alter-gemini-25-pro':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
     // Mistral models via AlterHQ
-    'alter-mistral-large':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
-    'alter-mistral-small':    { endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
-    'alter-codestral':        { endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
-    'alter-pixtral':          { endpoint: 'https://alterhq.com/api', model: 'Mistral#pixtral-large-latest'        },
+    'alter-mistral-large':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
+    'alter-mistral-small':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
+    'alter-codestral':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
+    'alter-pixtral':          { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#pixtral-large-latest'        },
 
-    // Anthropic — direct API
-    'anthropic-opus':     { endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
-    'anthropic-sonnet':   { endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
-    'anthropic-haiku':    { endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
+    // Anthropic — direct API (uses Drafts built-in AnthropicAI class)
+    'anthropic-opus':     { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
+    'anthropic-sonnet':   { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
+    'anthropic-haiku':    { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
 
-    // OpenAI — direct API
-    'openai-5-mini':      { endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'                 },
-    'openai-5-nano':      { endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini'            },
+    // OpenAI — direct API (uses Drafts built-in OpenAI class)
+    'openai-5-mini':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'                 },
+    'openai-5-nano':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini'            },
 
     // Ollama — local inference, no API key needed
-    'ollama-llama3':      { endpoint: 'http://localhost:11434', model: 'llama3'   },
-    'ollama-mistral':     { endpoint: 'http://localhost:11434', model: 'mistral'  },
+    'ollama-llama3':      { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'llama3'   },
+    'ollama-mistral':     { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'mistral'  },
 };
 
 // Expose the registry so scripts can inspect available shorthands.
@@ -325,7 +325,7 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
         return;
     }
 
-    const provider = detectProvider(providerConfig.endpoint);
+    const provider = providerConfig.provider || detectProvider(providerConfig.endpoint);
 
     switch (provider) {
         case 'alter':
@@ -341,7 +341,7 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
             callOllama(providerConfig, params, onSuccess, onError);
             break;
         default:
-            onError(`ai-engine: unrecognised provider endpoint "${providerConfig.endpoint}".`);
+            onError(`ai-engine: unrecognised provider "${provider}" for endpoint "${providerConfig.endpoint}". Use a known shorthand or pass a config with a provider field.`);
     }
 };
 
