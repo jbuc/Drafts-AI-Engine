@@ -4,7 +4,7 @@
  * A multi-provider AI library for use in Agile Tortoise's Drafts app.
  * Place this file in Drafts/Library/Scripts in iCloud.
  *
- * Usage: const aiEngine = require('ai-engine.js');
+ * Usage: require('ai-engine.js');   // aiEngine is available globally after this
  *
  * Pass a pre-defined model shorthand string to callAI:
  *
@@ -23,7 +23,7 @@
  *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
  */
 
-const aiEngine = {};
+var aiEngine = {};
 
 // ---------------------------------------------------------------------------
 // Pre-defined model registry
@@ -180,34 +180,29 @@ function callAlter(providerConfig, params, onSuccess, onError) {
 
 // ---------------------------------------------------------------------------
 // OpenAI (and OpenAI-compatible endpoints)
+// Uses Drafts' built-in OpenAI class — API key is managed by Drafts credentials.
 // ---------------------------------------------------------------------------
 
 function callOpenAI(providerConfig, params, onSuccess, onError) {
-    const apiKey = getApiKey('openai', 'OpenAI');
-    if (!apiKey) { onError('OpenAI: failed to retrieve API key.'); return; }
+    const model  = providerConfig.model || 'gpt-4o';
+    const system = buildSystemPrompt(params);
 
-    const baseUrl = (providerConfig.endpoint || 'https://api.openai.com/v1').replace(/\/$/, '');
-    const model   = providerConfig.model || 'gpt-4o';
-    const system  = buildSystemPrompt(params);
+    const ai = new OpenAI();
+    ai.model = model;
 
-    const payload = {
-        model: model,
-        messages: [
-            { role: 'system', content: system },
-            { role: 'user',   content: params.input || '' },
-        ],
-    };
-
-    const response = httpPost(
-        `${baseUrl}/chat/completions`,
-        {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+    const response = ai.request({
+        method: 'POST',
+        url: '/chat/completions',
+        data: {
+            model: model,
+            messages: [
+                { role: 'system', content: system },
+                { role: 'user',   content: params.input || '' },
+            ],
         },
-        payload
-    );
+    });
 
-    if (response.success) {
+    if (response && response.success) {
         try {
             const result = JSON.parse(response.responseText);
             onSuccess(result.choices[0].message.content, result);
@@ -215,42 +210,35 @@ function callOpenAI(providerConfig, params, onSuccess, onError) {
             onError(`OpenAI: failed to parse response — ${e}`);
         }
     } else {
-        onError(`OpenAI API error ${response.statusCode}: ${response.responseText}`);
+        onError(`OpenAI error: ${ai.lastError || (response ? response.statusCode : 'no response')}`);
     }
 }
 
 // ---------------------------------------------------------------------------
 // Anthropic (Claude)
+// Uses Drafts' built-in AnthropicAI class — API key is managed by Drafts credentials.
 // ---------------------------------------------------------------------------
 
 function callAnthropic(providerConfig, params, onSuccess, onError) {
-    const apiKey = getApiKey('anthropic', 'Anthropic');
-    if (!apiKey) { onError('Anthropic: failed to retrieve API key.'); return; }
+    const model  = providerConfig.model || 'claude-opus-4-6';
+    const system = buildSystemPrompt(params);
 
-    const baseUrl = (providerConfig.endpoint || 'https://api.anthropic.com').replace(/\/$/, '');
-    const model   = providerConfig.model || 'claude-opus-4-6';
-    const system  = buildSystemPrompt(params);
+    const ai = new AnthropicAI();
 
-    const payload = {
-        model: model,
-        max_tokens: 4096,
-        system: system,
-        messages: [
-            { role: 'user', content: params.input || '' },
-        ],
-    };
-
-    const response = httpPost(
-        `${baseUrl}/v1/messages`,
-        {
-            'Content-Type':     'application/json',
-            'x-api-key':        apiKey,
-            'anthropic-version': '2023-06-01',
+    const response = ai.request({
+        method: 'POST',
+        url: '/v1/messages',
+        data: {
+            model: model,
+            max_tokens: 4096,
+            system: system,
+            messages: [
+                { role: 'user', content: params.input || '' },
+            ],
         },
-        payload
-    );
+    });
 
-    if (response.success) {
+    if (response && response.success) {
         try {
             const result = JSON.parse(response.responseText);
             onSuccess(result.content[0].text, result);
@@ -258,7 +246,7 @@ function callAnthropic(providerConfig, params, onSuccess, onError) {
             onError(`Anthropic: failed to parse response — ${e}`);
         }
     } else {
-        onError(`Anthropic API error ${response.statusCode}: ${response.responseText}`);
+        onError(`Anthropic error: ${ai.lastError || (response ? response.statusCode : 'no response')}`);
     }
 }
 
@@ -357,6 +345,4 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
     }
 };
 
-exports.callAI = aiEngine.callAI;
-exports.models = aiEngine.models;
 

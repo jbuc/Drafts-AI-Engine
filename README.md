@@ -37,7 +37,7 @@ Copy paste the following code into a scripts action in in drafts. The first time
 
 
 ``` javascript
-const aiEngine = require('ai-engine.js');
+require('ai-engine.js');
 
 const actionRole = `
 
