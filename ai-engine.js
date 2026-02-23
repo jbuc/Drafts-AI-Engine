@@ -236,6 +236,7 @@ var aiEngine = (function () {
 
     var engine = {};
     engine.models = MODELS;
+    engine.defaultModel = 'alter-claude-haiku';
 
     /**
      * callAI — dispatch a prompt to the specified AI provider.
