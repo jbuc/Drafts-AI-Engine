@@ -23,8 +23,6 @@
  *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
  */
 
-(function() {
-
 const aiEngine = {};
 
 // ---------------------------------------------------------------------------
@@ -360,5 +358,3 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
 };
 
 return aiEngine;
-
-})();
