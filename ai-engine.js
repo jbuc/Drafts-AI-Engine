@@ -4,23 +4,28 @@
  * A multi-provider AI library for use in Agile Tortoise's Drafts app.
  * Place this file in Drafts/Library/Scripts in iCloud.
  *
- * Usage: require('ai-engine.js');   // aiEngine is available globally after this
+ * Usage:
+ *   require('ai-engine.js');
  *
- * Pass a pre-defined model shorthand string to callAI:
+ * Simplest call — sends draft content, creates a new draft with the response:
+ *   aiEngine.callAI(aiEngine.defaultModel, draft.content);
  *
- *   aiEngine.callAI('alter-gemini-pro', params, onSuccess, onError);
+ * With a success keyword — 'new', 'replace', 'append', 'prepend', or 'tokens':
+ *   aiEngine.callAI(aiEngine.defaultModel, draft.content, 'replace');
  *
- * Available shorthands (see aiEngine.models for the full list):
- *   alter-openai-4o      alter-openai-4o-mini  alter-openai-o1    alter-openai-o3   alter-openai-o3-mini
- *   alter-claude-opus    alter-claude-sonnet   alter-claude-37-sonnet              alter-claude-haiku
- *   alter-gemini-pro     alter-gemini-15-flash alter-gemini-fast  alter-gemini-25-pro
- *   alter-mistral-large  alter-mistral-small   alter-codestral    alter-pixtral
- *   anthropic-opus       anthropic-sonnet      anthropic-haiku
- *   openai-5-mini        openai-5-nano
- *   ollama-llama3        ollama-mistral
+ * Full form — structured prompt with custom callbacks:
+ *   aiEngine.callAI('alter-gemini-pro', {
+ *       role: '...', goal: '...', steps: '...', output: '...', input: draft.content
+ *   }, function (text) { ... }, function (err) { ... });
  *
- * You can also pass a custom config object if you need a model not in the list:
- *   aiEngine.callAI({ provider: 'openai', endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
+ * Success keywords:
+ *   'new'     — create a new draft with the response (default)
+ *   'replace' — replace the current draft's content
+ *   'append'  — add the response to the end of the current draft
+ *   'prepend' — add the response to the beginning of the current draft
+ *   'tokens'  — set template tags [[ai_title]] and [[ai_content]] for follow-up steps
+ *
+ * See aiEngine.models for the full list of available model shorthands.
  */
 
 // Everything is wrapped in an IIFE so helpers are guaranteed closure variables,
@@ -51,12 +56,12 @@ var aiEngine = (function () {
         'alter-codestral':        { provider: 'alter', endpoint: 'https://alterhq.com/api/v1', model: 'Mistral#codestral-latest'            },
         'alter-pixtral':          { provider: 'alter', endpoint: 'https://alterhq.com/api/v1', model: 'Mistral#pixtral-large-latest'        },
 
-        // Anthropic — direct API (uses Drafts built-in AnthropicAI class)
+        // Anthropic — direct API
         'anthropic-opus':     { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
         'anthropic-sonnet':   { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
         'anthropic-haiku':    { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
 
-        // OpenAI — direct API (uses Drafts built-in OpenAI class)
+        // OpenAI — direct API
         'openai-5-mini':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'      },
         'openai-5-nano':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
 
@@ -89,7 +94,7 @@ var aiEngine = (function () {
     }
 
     // ---------------------------------------------------------------------------
-    // Credential management (used by AlterHQ)
+    // Credential management
     // ---------------------------------------------------------------------------
 
     function getApiKey(providerKey, providerDisplayName) {
@@ -100,7 +105,7 @@ var aiEngine = (function () {
     }
 
     // ---------------------------------------------------------------------------
-    // HTTP helper (used by AlterHQ and Ollama)
+    // HTTP helper
     // ---------------------------------------------------------------------------
 
     function httpPost(url, headers, body) {
@@ -116,7 +121,7 @@ var aiEngine = (function () {
         var apiKey = getApiKey('AlterHQ', 'AlterHQ');
         if (!apiKey) { onError('AlterHQ: failed to retrieve API key.'); return; }
 
-        var baseUrl = (providerConfig.endpoint || 'https://alterhq.com/api').replace(/\/$/, '');
+        var baseUrl = (providerConfig.endpoint || 'https://alterhq.com/api/v1').replace(/\/$/, '');
         var model   = providerConfig.model || 'OpenAI#gpt-4o';
         var system  = buildSystemPrompt(params);
 
@@ -139,26 +144,24 @@ var aiEngine = (function () {
     }
 
     // ---------------------------------------------------------------------------
-    // OpenAI — uses Drafts built-in OpenAI class (handles credentials)
+    // OpenAI — direct HTTP, Bearer token via credential store
     // ---------------------------------------------------------------------------
 
     function callOpenAI(providerConfig, params, onSuccess, onError) {
-        var model  = providerConfig.model || 'gpt-4o';
-        var system = buildSystemPrompt(params);
+        var apiKey = getApiKey('OpenAI', 'OpenAI');
+        if (!apiKey) { onError('OpenAI: failed to retrieve API key.'); return; }
 
-        var ai = new OpenAI();
-        ai.model = model;
+        var baseUrl = (providerConfig.endpoint || 'https://api.openai.com/v1').replace(/\/$/, '');
+        var model   = providerConfig.model || 'gpt-4o';
+        var system  = buildSystemPrompt(params);
 
-        var response = ai.request({
-            method: 'POST',
-            url: '/chat/completions',
-            data: {
-                model: model,
-                messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }],
-            },
-        });
+        var response = httpPost(
+            baseUrl + '/chat/completions',
+            { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+            { model: model, messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }] }
+        );
 
-        if (response && response.success) {
+        if (response.success) {
             try {
                 var result = JSON.parse(response.responseText);
                 onSuccess(result.choices[0].message.content, result);
@@ -166,32 +169,29 @@ var aiEngine = (function () {
                 onError('OpenAI: failed to parse response — ' + e);
             }
         } else {
-            onError('OpenAI error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
+            onError('OpenAI API error ' + response.statusCode + ': ' + response.responseText);
         }
     }
 
     // ---------------------------------------------------------------------------
-    // Anthropic — uses Drafts built-in AnthropicAI class (handles credentials)
+    // Anthropic — direct HTTP, x-api-key header via credential store
     // ---------------------------------------------------------------------------
 
     function callAnthropic(providerConfig, params, onSuccess, onError) {
-        var model  = providerConfig.model || 'claude-opus-4-6';
-        var system = buildSystemPrompt(params);
+        var apiKey = getApiKey('Anthropic', 'Anthropic');
+        if (!apiKey) { onError('Anthropic: failed to retrieve API key.'); return; }
 
-        var ai = new AnthropicAI();
+        var baseUrl = (providerConfig.endpoint || 'https://api.anthropic.com').replace(/\/$/, '');
+        var model   = providerConfig.model || 'claude-opus-4-6';
+        var system  = buildSystemPrompt(params);
 
-        var response = ai.request({
-            method: 'POST',
-            url: '/v1/messages',
-            data: {
-                model: model,
-                max_tokens: 4096,
-                system: system,
-                messages: [{ role: 'user', content: params.input || '' }],
-            },
-        });
+        var response = httpPost(
+            baseUrl + '/v1/messages',
+            { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            { model: model, max_tokens: 4096, system: system, messages: [{ role: 'user', content: params.input || '' }] }
+        );
 
-        if (response && response.success) {
+        if (response.success) {
             try {
                 var result = JSON.parse(response.responseText);
                 onSuccess(result.content[0].text, result);
@@ -199,7 +199,7 @@ var aiEngine = (function () {
                 onError('Anthropic: failed to parse response — ' + e);
             }
         } else {
-            onError('Anthropic error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
+            onError('Anthropic API error ' + response.statusCode + ': ' + response.responseText);
         }
     }
 
@@ -231,28 +231,54 @@ var aiEngine = (function () {
     }
 
     // ---------------------------------------------------------------------------
+    // Built-in success handlers (keyword → function)
+    // ---------------------------------------------------------------------------
+
+    var SUCCESS_HANDLERS = {
+        'new': function (responseText) {
+            var d = Draft.create();
+            d.content = responseText;
+            d.update();
+        },
+        'replace': function (responseText) {
+            draft.content = responseText;
+            draft.update();
+        },
+        'append': function (responseText) {
+            draft.content = draft.content + '\n' + responseText;
+            draft.update();
+        },
+        'prepend': function (responseText) {
+            draft.content = responseText + '\n' + draft.content;
+            draft.update();
+        },
+        'tokens': function (responseText) {
+            var firstLine = responseText.split('\n')[0].trim();
+            var title = firstLine.length > 80 ? firstLine.substring(0, 80) : firstLine;
+            draft.setTemplateTag('ai_title', title);
+            draft.setTemplateTag('ai_content', responseText);
+            draft.update();
+        },
+    };
+
+    // ---------------------------------------------------------------------------
     // Public API
     // ---------------------------------------------------------------------------
 
     var engine = {};
     engine.models = MODELS;
+    engine.defaultModel = 'alter-claude-haiku';
 
     /**
      * callAI — dispatch a prompt to the specified AI provider.
      *
      * @param {string|Object} model         Pre-defined shorthand (e.g. 'alter-gemini-pro') OR
      *                                      a custom config { provider, endpoint, model }.
-     * @param {string|Object} [params]      Either a plain string (used as the full input prompt),
-     *                                      or a params object with any of:
-     *                                        params.input    — the user's prompt text
-     *                                        params.role     — system role description
-     *                                        params.goal     — high-level goal
-     *                                        params.steps    — step-by-step instructions
-     *                                        params.output   — output format requirements
-     *                                        params.example  — example of desired output
+     * @param {string|Object} [params]      A plain string (used as the input prompt), or a params
+     *                                      object: { input, role, goal, steps, output, example }.
      *                                      Omit entirely to send an empty prompt.
-     * @param {Function}      [onSuccess]   Called with (responseText, rawPayload).
-     *                                      Default: creates a new Drafts draft with the response.
+     * @param {string|Function} [onSuccess] A keyword string — 'new' (default), 'replace', 'append',
+     *                                      'prepend', or 'tokens' — or a custom function(responseText, raw).
      * @param {Function}      [onError]     Called with (errorMessage).
      *                                      Default: calls context.fail with the error.
      */
@@ -264,18 +290,23 @@ var aiEngine = (function () {
             params = {};
         }
 
-        // Default callbacks
-        if (typeof onSuccess !== 'function') {
-            onSuccess = function (responseText) {
-                var d = Draft.create();
-                d.content = responseText;
-                d.update();
-            };
-        }
+        // Default error handler
         if (typeof onError !== 'function') {
             onError = function (err) {
                 context.fail('AI Engine Error: ' + err);
             };
+        }
+
+        // Resolve onSuccess: keyword string → built-in handler
+        if (typeof onSuccess === 'string') {
+            var handler = SUCCESS_HANDLERS[onSuccess];
+            if (!handler) {
+                onError('ai-engine: unknown success keyword "' + onSuccess + '". Use: new, replace, append, prepend, or tokens.');
+                return;
+            }
+            onSuccess = handler;
+        } else if (typeof onSuccess !== 'function') {
+            onSuccess = SUCCESS_HANDLERS['new'];
         }
 
         var providerConfig;
