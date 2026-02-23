@@ -113,7 +113,7 @@ var aiEngine = (function () {
     // ---------------------------------------------------------------------------
 
     function callAlter(providerConfig, params, onSuccess, onError) {
-        var apiKey = getApiKey('AlterHQ API', 'AlterHQ');
+        var apiKey = getApiKey('AlterHQ', 'AlterHQ');
         if (!apiKey) { onError('AlterHQ: failed to retrieve API key.'); return; }
 
         var baseUrl = (providerConfig.endpoint || 'https://alterhq.com/api').replace(/\/$/, '');
