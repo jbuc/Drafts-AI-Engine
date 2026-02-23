@@ -4,7 +4,7 @@
  * A multi-provider AI library for use in Agile Tortoise's Drafts app.
  * Place this file in Drafts/Library/Scripts in iCloud.
  *
- * Usage: aiEngine = require('ai-engine.js');
+ * Usage: const aiEngine = require('ai-engine.js');
  *
  * Pass a pre-defined model shorthand string to callAI:
  *
@@ -22,8 +22,6 @@
  * You can also pass a custom config object if you need a model not in the list:
  *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
  */
-
-(function() {
 
 const aiEngine = {};
 
@@ -359,6 +357,6 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
     }
 };
 
-return aiEngine;
+exports.callAI = aiEngine.callAI;
+exports.models = aiEngine.models;
 
-})();
