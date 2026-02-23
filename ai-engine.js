@@ -139,26 +139,24 @@ var aiEngine = (function () {
     }
 
     // ---------------------------------------------------------------------------
-    // OpenAI — uses Drafts built-in OpenAI class (handles credentials)
+    // OpenAI — direct HTTP, Bearer token via credential store
     // ---------------------------------------------------------------------------
 
     function callOpenAI(providerConfig, params, onSuccess, onError) {
-        var model  = providerConfig.model || 'gpt-4o';
-        var system = buildSystemPrompt(params);
+        var apiKey = getApiKey('OpenAI', 'OpenAI');
+        if (!apiKey) { onError('OpenAI: failed to retrieve API key.'); return; }
 
-        var ai = new OpenAI();
-        ai.model = model;
+        var baseUrl = (providerConfig.endpoint || 'https://api.openai.com/v1').replace(/\/$/, '');
+        var model   = providerConfig.model || 'gpt-4o';
+        var system  = buildSystemPrompt(params);
 
-        var response = ai.request({
-            method: 'POST',
-            url: '/chat/completions',
-            data: {
-                model: model,
-                messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }],
-            },
-        });
+        var response = httpPost(
+            baseUrl + '/chat/completions',
+            { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+            { model: model, messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }] }
+        );
 
-        if (response && response.success) {
+        if (response.success) {
             try {
                 var result = JSON.parse(response.responseText);
                 onSuccess(result.choices[0].message.content, result);
@@ -166,32 +164,29 @@ var aiEngine = (function () {
                 onError('OpenAI: failed to parse response — ' + e);
             }
         } else {
-            onError('OpenAI error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
+            onError('OpenAI API error ' + response.statusCode + ': ' + response.responseText);
         }
     }
 
     // ---------------------------------------------------------------------------
-    // Anthropic — uses Drafts built-in AnthropicAI class (handles credentials)
+    // Anthropic — direct HTTP, x-api-key header via credential store
     // ---------------------------------------------------------------------------
 
     function callAnthropic(providerConfig, params, onSuccess, onError) {
-        var model  = providerConfig.model || 'claude-opus-4-6';
-        var system = buildSystemPrompt(params);
+        var apiKey = getApiKey('Anthropic', 'Anthropic');
+        if (!apiKey) { onError('Anthropic: failed to retrieve API key.'); return; }
 
-        var ai = new AnthropicAI();
+        var baseUrl = (providerConfig.endpoint || 'https://api.anthropic.com').replace(/\/$/, '');
+        var model   = providerConfig.model || 'claude-opus-4-6';
+        var system  = buildSystemPrompt(params);
 
-        var response = ai.request({
-            method: 'POST',
-            url: '/v1/messages',
-            data: {
-                model: model,
-                max_tokens: 4096,
-                system: system,
-                messages: [{ role: 'user', content: params.input || '' }],
-            },
-        });
+        var response = httpPost(
+            baseUrl + '/v1/messages',
+            { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            { model: model, max_tokens: 4096, system: system, messages: [{ role: 'user', content: params.input || '' }] }
+        );
 
-        if (response && response.success) {
+        if (response.success) {
             try {
                 var result = JSON.parse(response.responseText);
                 onSuccess(result.content[0].text, result);
@@ -199,7 +194,7 @@ var aiEngine = (function () {
                 onError('Anthropic: failed to parse response — ' + e);
             }
         } else {
-            onError('Anthropic error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
+            onError('Anthropic API error ' + response.statusCode + ': ' + response.responseText);
         }
     }
 
