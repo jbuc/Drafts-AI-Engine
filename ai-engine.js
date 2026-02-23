@@ -20,327 +20,266 @@
  *   ollama-llama3        ollama-mistral
  *
  * You can also pass a custom config object if you need a model not in the list:
- *   aiEngine.callAI({ endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
+ *   aiEngine.callAI({ provider: 'openai', endpoint: "https://api.openai.com/v1", model: "gpt-4o" }, params, onSuccess, onError);
  */
 
-var aiEngine = {};
+// Everything is wrapped in an IIFE so helpers are guaranteed closure variables,
+// not top-level declarations that may be scoped away by Drafts' eval environment.
+var aiEngine = (function () {
 
-// ---------------------------------------------------------------------------
-// Pre-defined model registry
-// Keys are the shorthand strings accepted by callAI.
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // Pre-defined model registry
+    // ---------------------------------------------------------------------------
 
-const MODELS = {
-    // AlterHQ — routing proxy (model field: "Provider#model-id")
-    // OpenAI models via AlterHQ
-    'alter-openai-4o':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
-    'alter-openai-4o-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
-    'alter-openai-o1':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
-    'alter-openai-o3':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
-    'alter-openai-o3-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
-    // Claude models via AlterHQ
-    'alter-claude-opus':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
-    'alter-claude-sonnet':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
-    'alter-claude-37-sonnet': { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
-    'alter-claude-haiku':     { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
-    // Gemini models via AlterHQ
-    'alter-gemini-pro':       { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
-    'alter-gemini-15-flash':  { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
-    'alter-gemini-fast':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
-    'alter-gemini-25-pro':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
-    // Mistral models via AlterHQ
-    'alter-mistral-large':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
-    'alter-mistral-small':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
-    'alter-codestral':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
-    'alter-pixtral':          { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#pixtral-large-latest'        },
+    var MODELS = {
+        // AlterHQ — routing proxy (model field: "Provider#model-id")
+        'alter-openai-4o':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o'                      },
+        'alter-openai-4o-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#gpt-4o-mini'                 },
+        'alter-openai-o1':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o1'                          },
+        'alter-openai-o3':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3'                          },
+        'alter-openai-o3-mini':   { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'OpenAI#o3-mini'                     },
+        'alter-claude-opus':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-Opus-20240229'       },
+        'alter-claude-sonnet':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Sonnet-20240620'   },
+        'alter-claude-37-sonnet': { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-7-Sonnet-20250219'   },
+        'alter-claude-haiku':     { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Claude#Claude-3-5-Haiku-20241022'    },
+        'alter-gemini-pro':       { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-pro'              },
+        'alter-gemini-15-flash':  { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-1.5-flash'            },
+        'alter-gemini-fast':      { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.0-flash'            },
+        'alter-gemini-25-pro':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Gemini#gemini-2.5-pro'              },
+        'alter-mistral-large':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-large-latest'        },
+        'alter-mistral-small':    { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#mistral-small-latest'        },
+        'alter-codestral':        { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#codestral-latest'            },
+        'alter-pixtral':          { provider: 'alter', endpoint: 'https://alterhq.com/api', model: 'Mistral#pixtral-large-latest'        },
 
-    // Anthropic — direct API (uses Drafts built-in AnthropicAI class)
-    'anthropic-opus':     { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
-    'anthropic-sonnet':   { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
-    'anthropic-haiku':    { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
+        // Anthropic — direct API (uses Drafts built-in AnthropicAI class)
+        'anthropic-opus':     { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-opus-4-6'              },
+        'anthropic-sonnet':   { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-sonnet-4-6'            },
+        'anthropic-haiku':    { provider: 'anthropic', endpoint: 'https://api.anthropic.com', model: 'claude-haiku-4-5-20251001'    },
 
-    // OpenAI — direct API (uses Drafts built-in OpenAI class)
-    'openai-5-mini':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'                 },
-    'openai-5-nano':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini'            },
+        // OpenAI — direct API (uses Drafts built-in OpenAI class)
+        'openai-5-mini':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'      },
+        'openai-5-nano':      { provider: 'openai', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
 
-    // Ollama — local inference, no API key needed
-    'ollama-llama3':      { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'llama3'   },
-    'ollama-mistral':     { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'mistral'  },
-};
-
-// Expose the registry so scripts can inspect available shorthands.
-aiEngine.models = MODELS;
-
-// ---------------------------------------------------------------------------
-// Provider detection
-// ---------------------------------------------------------------------------
-
-function detectProvider(endpoint) {
-    if (!endpoint) return 'unknown';
-    const url = endpoint.toLowerCase();
-    if (url.includes('alterhq.com'))   return 'AlterHQ';
-    if (url.includes('openai.com'))    return 'openai';
-    if (url.includes('anthropic.com')) return 'anthropic';
-    if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('ollama')) return 'ollama';
-    // Treat any other endpoint as OpenAI-compatible
-    return 'openai';
-}
-
-// ---------------------------------------------------------------------------
-// Prompt assembly
-// ---------------------------------------------------------------------------
-
-function buildSystemPrompt(params) {
-    const sections = [
-        ['Role',          params.role],
-        ['Goal',          params.goal],
-        ['Instructions',  params.steps],
-        ['Output Format', params.output],
-        ['Example',       params.example],
-    ];
-
-    return sections
-        .filter(([, value]) => value && value.trim())
-        .map(([label, value]) => `# ${label}\n${value.trim()}`)
-        .join('\n\n');
-}
-
-// ---------------------------------------------------------------------------
-// Credential management
-// Drafts stores API keys per-provider; the user is prompted once per provider.
-// ---------------------------------------------------------------------------
-
-function getApiKey(providerKey, providerDisplayName) {
-    const cred = Credential.create(providerKey, `${providerDisplayName} API`);
-    cred.addTextField('api_key', `${providerDisplayName} API`);
-
-    if (!cred.authorize()) {
-        return null;
-    }
-    return cred.getValue('api_key');
-}
-
-// ---------------------------------------------------------------------------
-// HTTP helper
-// ---------------------------------------------------------------------------
-
-function httpPost(url, headers, body) {
-    const http = HTTP.create();
-    return http.request({
-        url: url,
-        method: 'POST',
-        headers: headers,
-        data: body,
-    });
-}
-
-// ---------------------------------------------------------------------------
-// AlterHQ
-// AlterHQ is a routing proxy; the model field encodes provider and model,
-// e.g. "Gemini#gemini-1.5-pro" or "OpenAI#gpt-4o".
-// The API surface is OpenAI-compatible.
-// ---------------------------------------------------------------------------
-
-function callAlter(providerConfig, params, onSuccess, onError) {
-    const apiKey = getApiKey('AlterHQ API', 'AlterHQ');
-    if (!apiKey) { onError('AlterHQ: failed to retrieve API key.'); return; }
-
-    const baseUrl  = (providerConfig.endpoint || 'https://alterhq.com/api').replace(/\/$/, '');
-    const model    = providerConfig.model || 'OpenAI#gpt-4o';
-    const system   = buildSystemPrompt(params);
-
-    const payload = {
-        model: model,
-        messages: [
-            { role: 'system', content: system },
-            { role: 'user',   content: params.input || '' },
-        ],
+        // Ollama — local inference, no API key needed
+        'ollama-llama3':      { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'llama3'   },
+        'ollama-mistral':     { provider: 'ollama', endpoint: 'http://localhost:11434', model: 'mistral'  },
     };
 
-    const response = httpPost(
-        `${baseUrl}/chat/completions`,
-        {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        payload
-    );
+    // ---------------------------------------------------------------------------
+    // Prompt assembly
+    // ---------------------------------------------------------------------------
 
-    if (response.success) {
-        try {
-            const result = JSON.parse(response.responseText);
-            onSuccess(result.choices[0].message.content, result);
-        } catch (e) {
-            onError(`AlterHQ: failed to parse response — ${e}`);
+    function buildSystemPrompt(params) {
+        var sections = [
+            ['Role',          params.role],
+            ['Goal',          params.goal],
+            ['Instructions',  params.steps],
+            ['Output Format', params.output],
+            ['Example',       params.example],
+        ];
+        var parts = [];
+        for (var i = 0; i < sections.length; i++) {
+            var label = sections[i][0];
+            var value = sections[i][1];
+            if (value && value.trim()) {
+                parts.push('# ' + label + '\n' + value.trim());
+            }
         }
-    } else {
-        onError(`AlterHQ API error ${response.statusCode}: ${response.responseText}`);
+        return parts.join('\n\n');
     }
-}
 
-// ---------------------------------------------------------------------------
-// OpenAI (and OpenAI-compatible endpoints)
-// Uses Drafts' built-in OpenAI class — API key is managed by Drafts credentials.
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // Credential management (used by AlterHQ)
+    // ---------------------------------------------------------------------------
 
-function callOpenAI(providerConfig, params, onSuccess, onError) {
-    const model  = providerConfig.model || 'gpt-4o';
-    const system = buildSystemPrompt(params);
+    function getApiKey(providerKey, providerDisplayName) {
+        var cred = Credential.create(providerKey, providerDisplayName + ' API Key');
+        cred.addTextField('api_key', providerDisplayName + ' API Key');
+        if (!cred.authorize()) { return null; }
+        return cred.getValue('api_key');
+    }
 
-    const ai = new OpenAI();
-    ai.model = model;
+    // ---------------------------------------------------------------------------
+    // HTTP helper (used by AlterHQ and Ollama)
+    // ---------------------------------------------------------------------------
 
-    const response = ai.request({
-        method: 'POST',
-        url: '/chat/completions',
-        data: {
-            model: model,
-            messages: [
-                { role: 'system', content: system },
-                { role: 'user',   content: params.input || '' },
-            ],
-        },
-    });
+    function httpPost(url, headers, body) {
+        var http = HTTP.create();
+        return http.request({ url: url, method: 'POST', headers: headers, data: body });
+    }
 
-    if (response && response.success) {
-        try {
-            const result = JSON.parse(response.responseText);
-            onSuccess(result.choices[0].message.content, result);
-        } catch (e) {
-            onError(`OpenAI: failed to parse response — ${e}`);
+    // ---------------------------------------------------------------------------
+    // AlterHQ — OpenAI-compatible routing proxy
+    // ---------------------------------------------------------------------------
+
+    function callAlter(providerConfig, params, onSuccess, onError) {
+        var apiKey = getApiKey('AlterHQ API', 'AlterHQ');
+        if (!apiKey) { onError('AlterHQ: failed to retrieve API key.'); return; }
+
+        var baseUrl = (providerConfig.endpoint || 'https://alterhq.com/api').replace(/\/$/, '');
+        var model   = providerConfig.model || 'OpenAI#gpt-4o';
+        var system  = buildSystemPrompt(params);
+
+        var response = httpPost(
+            baseUrl + '/chat/completions',
+            { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+            { model: model, messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }] }
+        );
+
+        if (response.success) {
+            try {
+                var result = JSON.parse(response.responseText);
+                onSuccess(result.choices[0].message.content, result);
+            } catch (e) {
+                onError('AlterHQ: failed to parse response — ' + e);
+            }
+        } else {
+            onError('AlterHQ API error ' + response.statusCode + ': ' + response.responseText);
         }
-    } else {
-        onError(`OpenAI error: ${ai.lastError || (response ? response.statusCode : 'no response')}`);
     }
-}
 
-// ---------------------------------------------------------------------------
-// Anthropic (Claude)
-// Uses Drafts' built-in AnthropicAI class — API key is managed by Drafts credentials.
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // OpenAI — uses Drafts built-in OpenAI class (handles credentials)
+    // ---------------------------------------------------------------------------
 
-function callAnthropic(providerConfig, params, onSuccess, onError) {
-    const model  = providerConfig.model || 'claude-opus-4-6';
-    const system = buildSystemPrompt(params);
+    function callOpenAI(providerConfig, params, onSuccess, onError) {
+        var model  = providerConfig.model || 'gpt-4o';
+        var system = buildSystemPrompt(params);
 
-    const ai = new AnthropicAI();
+        var ai = new OpenAI();
+        ai.model = model;
 
-    const response = ai.request({
-        method: 'POST',
-        url: '/v1/messages',
-        data: {
-            model: model,
-            max_tokens: 4096,
-            system: system,
-            messages: [
-                { role: 'user', content: params.input || '' },
-            ],
-        },
-    });
+        var response = ai.request({
+            method: 'POST',
+            url: '/chat/completions',
+            data: {
+                model: model,
+                messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }],
+            },
+        });
 
-    if (response && response.success) {
-        try {
-            const result = JSON.parse(response.responseText);
-            onSuccess(result.content[0].text, result);
-        } catch (e) {
-            onError(`Anthropic: failed to parse response — ${e}`);
+        if (response && response.success) {
+            try {
+                var result = JSON.parse(response.responseText);
+                onSuccess(result.choices[0].message.content, result);
+            } catch (e) {
+                onError('OpenAI: failed to parse response — ' + e);
+            }
+        } else {
+            onError('OpenAI error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
         }
-    } else {
-        onError(`Anthropic error: ${ai.lastError || (response ? response.statusCode : 'no response')}`);
     }
-}
 
-// ---------------------------------------------------------------------------
-// Ollama (local inference)
-// No API key required.
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // Anthropic — uses Drafts built-in AnthropicAI class (handles credentials)
+    // ---------------------------------------------------------------------------
 
-function callOllama(providerConfig, params, onSuccess, onError) {
-    const baseUrl = (providerConfig.endpoint || 'http://localhost:11434').replace(/\/$/, '');
-    const model   = providerConfig.model || 'llama3';
-    const system  = buildSystemPrompt(params);
+    function callAnthropic(providerConfig, params, onSuccess, onError) {
+        var model  = providerConfig.model || 'claude-opus-4-6';
+        var system = buildSystemPrompt(params);
 
-    const payload = {
-        model: model,
-        stream: false,
-        messages: [
-            { role: 'system', content: system },
-            { role: 'user',   content: params.input || '' },
-        ],
-    };
+        var ai = new AnthropicAI();
 
-    const response = httpPost(
-        `${baseUrl}/api/chat`,
-        { 'Content-Type': 'application/json' },
-        payload
-    );
+        var response = ai.request({
+            method: 'POST',
+            url: '/v1/messages',
+            data: {
+                model: model,
+                max_tokens: 4096,
+                system: system,
+                messages: [{ role: 'user', content: params.input || '' }],
+            },
+        });
 
-    if (response.success) {
-        try {
-            const result = JSON.parse(response.responseText);
-            onSuccess(result.message.content, result);
-        } catch (e) {
-            onError(`Ollama: failed to parse response — ${e}`);
+        if (response && response.success) {
+            try {
+                var result = JSON.parse(response.responseText);
+                onSuccess(result.content[0].text, result);
+            } catch (e) {
+                onError('Anthropic: failed to parse response — ' + e);
+            }
+        } else {
+            onError('Anthropic error: ' + (ai.lastError || (response ? response.statusCode : 'no response')));
         }
-    } else {
-        onError(`Ollama API error ${response.statusCode}: ${response.responseText}`);
     }
-}
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // Ollama — local inference, no API key required
+    // ---------------------------------------------------------------------------
 
-/**
- * callAI — dispatch a prompt to the specified AI provider.
- *
- * @param {string|Object} model             Pre-defined shorthand (e.g. 'alter-gemini-pro') OR
- *                                          a custom config { endpoint, model }.
- * @param {Object}        params            Prompt parameters.
- * @param {string}        [params.role]     System role description.
- * @param {string}        [params.goal]     High-level goal for the AI.
- * @param {string}        [params.steps]    Step-by-step instructions.
- * @param {string}        [params.output]   Output format requirements.
- * @param {string}        [params.example]  An example of desired output.
- * @param {string}        [params.input]    The user's input text.
- * @param {Function}      onSuccess         Called with (responseText, rawPayload).
- * @param {Function}      onError           Called with (errorMessage).
- */
-aiEngine.callAI = function(model, params, onSuccess, onError) {
-    let providerConfig;
+    function callOllama(providerConfig, params, onSuccess, onError) {
+        var baseUrl = (providerConfig.endpoint || 'http://localhost:11434').replace(/\/$/, '');
+        var model   = providerConfig.model || 'llama3';
+        var system  = buildSystemPrompt(params);
 
-    if (typeof model === 'string') {
-        providerConfig = MODELS[model];
-        if (!providerConfig) {
-            const available = Object.keys(MODELS).join(', ');
-            onError(`ai-engine: unknown model "${model}". Available: ${available}`);
+        var response = httpPost(
+            baseUrl + '/api/chat',
+            { 'Content-Type': 'application/json' },
+            { model: model, stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: params.input || '' }] }
+        );
+
+        if (response.success) {
+            try {
+                var result = JSON.parse(response.responseText);
+                onSuccess(result.message.content, result);
+            } catch (e) {
+                onError('Ollama: failed to parse response — ' + e);
+            }
+        } else {
+            onError('Ollama API error ' + response.statusCode + ': ' + response.responseText);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Public API
+    // ---------------------------------------------------------------------------
+
+    var engine = {};
+    engine.models = MODELS;
+
+    /**
+     * callAI — dispatch a prompt to the specified AI provider.
+     *
+     * @param {string|Object} model         Pre-defined shorthand OR custom config { provider, endpoint, model }.
+     * @param {Object}        params        Prompt parameters.
+     * @param {string}        [params.role]     System role description.
+     * @param {string}        [params.goal]     High-level goal for the AI.
+     * @param {string}        [params.steps]    Step-by-step instructions.
+     * @param {string}        [params.output]   Output format requirements.
+     * @param {string}        [params.example]  An example of desired output.
+     * @param {string}        [params.input]    The user's input text.
+     * @param {Function}      onSuccess     Called with (responseText, rawPayload).
+     * @param {Function}      onError       Called with (errorMessage).
+     */
+    engine.callAI = function (model, params, onSuccess, onError) {
+        var providerConfig;
+
+        if (typeof model === 'string') {
+            providerConfig = MODELS[model];
+            if (!providerConfig) {
+                var available = Object.keys(MODELS).join(', ');
+                onError('ai-engine: unknown model "' + model + '". Available: ' + available);
+                return;
+            }
+        } else {
+            providerConfig = model;
+        }
+
+        if (!providerConfig || !providerConfig.provider) {
+            onError('ai-engine: config must include a provider field (alter, openai, anthropic, or ollama).');
             return;
         }
-    } else {
-        providerConfig = model;
-    }
 
-    if (!providerConfig || !providerConfig.endpoint) {
-        onError('ai-engine: a valid model shorthand or config object with an endpoint is required.');
-        return;
-    }
+        switch (providerConfig.provider) {
+            case 'alter':     callAlter(providerConfig, params, onSuccess, onError);     break;
+            case 'openai':    callOpenAI(providerConfig, params, onSuccess, onError);    break;
+            case 'anthropic': callAnthropic(providerConfig, params, onSuccess, onError); break;
+            case 'ollama':    callOllama(providerConfig, params, onSuccess, onError);    break;
+            default:
+                onError('ai-engine: unrecognised provider "' + providerConfig.provider + '". Use alter, openai, anthropic, or ollama.');
+        }
+    };
 
-    const provider = providerConfig.provider || detectProvider(providerConfig.endpoint);
+    return engine;
 
-    switch (provider) {
-        case 'alter':
-            callAlter(providerConfig, params, onSuccess, onError);
-            break;
-        case 'openai':
-            callOpenAI(providerConfig, params, onSuccess, onError);
-            break;
-        case 'anthropic':
-            callAnthropic(providerConfig, params, onSuccess, onError);
-            break;
-        case 'ollama':
-            callOllama(providerConfig, params, onSuccess, onError);
-            break;
-        default:
-            onError(`ai-engine: unrecognised provider "${provider}" for endpoint "${providerConfig.endpoint}". Use a known shorthand or pass a config with a provider field.`);
-    }
-};
+})();
