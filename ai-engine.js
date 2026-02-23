@@ -78,7 +78,7 @@ aiEngine.models = MODELS;
 function detectProvider(endpoint) {
     if (!endpoint) return 'unknown';
     const url = endpoint.toLowerCase();
-    if (url.includes('alterhq.com'))   return 'alter';
+    if (url.includes('alterhq.com'))   return 'AlterHQ';
     if (url.includes('openai.com'))    return 'openai';
     if (url.includes('anthropic.com')) return 'anthropic';
     if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('ollama')) return 'ollama';
@@ -111,8 +111,8 @@ function buildSystemPrompt(params) {
 // ---------------------------------------------------------------------------
 
 function getApiKey(providerKey, providerDisplayName) {
-    const cred = Credential.create(providerKey, `${providerDisplayName} API Key`);
-    cred.addTextField('api_key', `${providerDisplayName} API Key`);
+    const cred = Credential.create(providerKey, `${providerDisplayName} API`);
+    cred.addTextField('api_key', `${providerDisplayName} API`);
 
     if (!cred.authorize()) {
         return null;
@@ -344,5 +344,3 @@ aiEngine.callAI = function(model, params, onSuccess, onError) {
             onError(`ai-engine: unrecognised provider endpoint "${providerConfig.endpoint}".`);
     }
 };
-
-
