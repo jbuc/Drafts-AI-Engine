@@ -125,3 +125,36 @@ aiEngine.callAI(MODEL, {
 }, 'tokens');
 // After this step, [[ai_title]] holds the first line of the response,
 // and [[ai_content]] holds the full post — ready for any follow-up action step.
+
+
+// =============================================================================
+// EXAMPLE 11 — Auto-sanitize PII before every cloud call (global flag)
+// Set once at the top of your script; all callAI calls will scrub input
+// automatically. Emails, phones, SSNs, card numbers, and IPs are replaced
+// with labelled placeholders like [EMAIL], [PHONE], [SSN], [CARD], [IP].
+// Ollama (local) is never sanitized — only cloud providers are affected.
+// =============================================================================
+aiEngine.sanitizePII = true; // flip this flag on and all cloud calls are scrubbed
+aiEngine.callAI(MODEL, draft.content, 'new');
+
+
+// =============================================================================
+// EXAMPLE 12 — Sanitize a specific string on demand (without the global flag)
+// Useful if you want fine-grained control over what gets scrubbed.
+// =============================================================================
+var clean = aiEngine.sanitize(draft.content);
+aiEngine.callAI(MODEL, clean, 'new');
+
+
+// =============================================================================
+// EXAMPLE 13 — Add a custom PII pattern (e.g. internal employee IDs)
+// Push any { pattern, replacement } object onto engine.piiPatterns.
+// The pattern runs alongside the built-in ones whenever sanitizePII is true
+// or aiEngine.sanitize() is called directly.
+// =============================================================================
+aiEngine.piiPatterns.push({
+    pattern:     /\bEMP-\d{5,8}\b/gi,
+    replacement: '[EMPLOYEE_ID]',
+});
+aiEngine.sanitizePII = true;
+aiEngine.callAI(MODEL, draft.content, 'new');

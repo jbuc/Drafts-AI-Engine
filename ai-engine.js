@@ -26,6 +26,11 @@
  *   'tokens'  — set template tags [[ai_title]] and [[ai_content]] for follow-up steps
  *
  * See aiEngine.models for the full list of available model shorthands.
+ *
+ * PII sanitization (cloud providers only — Ollama is always local):
+ *   aiEngine.sanitizePII = true;          // auto-scrub every cloud call
+ *   aiEngine.sanitize(text)               // scrub a string on demand
+ *   aiEngine.piiPatterns.push({...})      // add custom { pattern, replacement } entries
  */
 
 // Everything is wrapped in an IIFE so helpers are guaranteed closure variables,
@@ -111,6 +116,28 @@ var aiEngine = (function () {
     function httpPost(url, headers, body) {
         var http = HTTP.create();
         return http.request({ url: url, method: 'POST', headers: headers, data: body });
+    }
+
+    // ---------------------------------------------------------------------------
+    // PII sanitization
+    // Built-in patterns replace common identifiers with labelled placeholders.
+    // Add your own entries to engine.piiPatterns at any time.
+    // ---------------------------------------------------------------------------
+
+    var PII_PATTERNS = [
+        { pattern: /\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/gi,                         replacement: '[EMAIL]' },
+        { pattern: /\b(?:\+?1[\s\-.]?)?\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}\b/g,  replacement: '[PHONE]' },
+        { pattern: /\b\d{3}[-\s]\d{2}[-\s]\d{4}\b/g,                                 replacement: '[SSN]'   },
+        { pattern: /\b(?:\d{4}[\s\-]?){3}\d{4}\b/g,                                  replacement: '[CARD]'  },
+        { pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,                                   replacement: '[IP]'    },
+    ];
+
+    function sanitizeText(text) {
+        if (typeof text !== 'string') { return text; }
+        for (var i = 0; i < PII_PATTERNS.length; i++) {
+            text = text.replace(PII_PATTERNS[i].pattern, PII_PATTERNS[i].replacement);
+        }
+        return text;
     }
 
     // ---------------------------------------------------------------------------
@@ -266,8 +293,11 @@ var aiEngine = (function () {
     // ---------------------------------------------------------------------------
 
     var engine = {};
-    engine.models = MODELS;
-    engine.defaultModel = 'alter-claude-haiku';
+    engine.models        = MODELS;
+    engine.defaultModel  = 'alter-claude-haiku';
+    engine.piiPatterns   = PII_PATTERNS;   // push custom { pattern, replacement } entries here
+    engine.sanitizePII   = false;          // set true to auto-scrub input before all cloud calls
+    engine.sanitize      = sanitizeText;   // call directly: aiEngine.sanitize(myText)
 
     /**
      * callAI — dispatch a prompt to the specified AI provider.
@@ -325,6 +355,14 @@ var aiEngine = (function () {
         if (!providerConfig || !providerConfig.provider) {
             onError('ai-engine: config must include a provider field (alter, openai, anthropic, or ollama).');
             return;
+        }
+
+        // Scrub PII from user input before sending to any cloud provider.
+        // Ollama is local, so it is intentionally skipped.
+        if (engine.sanitizePII && providerConfig.provider !== 'ollama') {
+            params = { input: sanitizeText(params.input || ''),
+                       role: params.role, goal: params.goal, steps: params.steps,
+                       output: params.output, example: params.example };
         }
 
         switch (providerConfig.provider) {
